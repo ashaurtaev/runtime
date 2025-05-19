@@ -49323,6 +49323,7 @@ HRESULT GCHeap::Initialize()
         }
         else
         {
+#ifdef HOST_64BIT
             gc_heap::regions_range = 
 #ifdef MULTIPLE_HEAPS
             // For SVR use max of 2x total_physical_memory or 256gb
@@ -49332,6 +49333,11 @@ HRESULT GCHeap::Initialize()
             min(
 #endif // MULTIPLE_HEAPS
                 (size_t)256 * 1024 * 1024 * 1024, (size_t)(2 * gc_heap::total_physical_mem));
+#else
+            gc_heap::regions_range = (2 * gc_heap::total_physical_mem) <= SIZE_MAX ?
+                                        (size_t)(2 * gc_heap::total_physical_mem) :
+                                        (size_t) gc_heap::total_physical_mem;
+#endif
         }
         size_t virtual_mem_limit = GCToOSInterface::GetVirtualMemoryLimit();
         gc_heap::regions_range = min(gc_heap::regions_range, virtual_mem_limit/2);

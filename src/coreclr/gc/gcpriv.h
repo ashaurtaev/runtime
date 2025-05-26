@@ -145,7 +145,9 @@ inline void FATAL_GC_ERROR()
 // to the mmap() calls in unix/gcenv.unix.cpp  More details here:
 //    https://github.com/dotnet/runtime/issues/104211
 #if !defined (BUILD_AS_STANDALONE) && !defined(__APPLE__) && !defined(__sun)
+#if defined (HOST_64BIT) || defined (TARGET_ARM)
 #define USE_REGIONS
+#endif
 #endif //BUILD_AS_STANDALONE && !__APPLE__
 
 //#define SPINLOCK_HISTORY

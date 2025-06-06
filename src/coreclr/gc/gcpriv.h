@@ -144,9 +144,9 @@ inline void FATAL_GC_ERROR()
 // For SunOS or illumos this is temporary, until we can add MAP_PRIVATE
 // to the mmap() calls in unix/gcenv.unix.cpp  More details here:
 //    https://github.com/dotnet/runtime/issues/104211
-#if defined (HOST_64BIT) && !defined (BUILD_AS_STANDALONE) && !defined(__APPLE__) && !defined(__sun)
+#if !defined (BUILD_AS_STANDALONE) && !defined(__APPLE__) && !defined(__sun)
 #define USE_REGIONS
-#endif //HOST_64BIT && BUILD_AS_STANDALONE && !__APPLE__
+#endif //BUILD_AS_STANDALONE && !__APPLE__
 
 //#define SPINLOCK_HISTORY
 //#define RECORD_LOH_STATE

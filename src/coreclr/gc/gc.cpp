@@ -46817,16 +46817,31 @@ void gc_heap::background_sweep()
 
         _ASSERTE(start_seg != NULL);
         heap_segment* seg = start_seg;
+
+#if !defined(DOUBLY_LINKED_FL) && defined(USE_REGIONS)
+        if (i == max_generation)
+        {
+            while (seg && heap_segment_background_allocated (seg) == 0)
+            {
+                // For SOH segments we go backwards.
+                dprintf (2, ("[h%d] skip new %p ", heap_number, seg));
+                seg = heap_segment_prev (gen_start_seg, seg);
+            }
+        }
+#endif //!DOUBLY_LINKED_FL && USE_REGIONS
+
         dprintf (2, ("bgs: sweeping gen %d seg %p->%p(%p)", gen->gen_num,
             heap_segment_mem (seg),
             heap_segment_allocated (seg),
             heap_segment_background_allocated (seg)));
         while (seg
-#ifdef DOUBLY_LINKED_FL
+#if defined(DOUBLY_LINKED_FL) || defined(USE_REGIONS)
                // We no longer go backwards in segment list for SOH so we need to bail when we see
                // segments newly allocated during bgc sweep.
+               // For 32bit SOH regions we already got to the last region with non-zero background allocated and go backwards
+               // For 32bit POH and LOH go forward same as on 64bit
                && !((heap_segment_background_allocated (seg) == 0) && (gen != large_object_generation))
-#endif //DOUBLY_LINKED_FL
+#endif //DOUBLY_LINKED_FL || USE_REGIONS
                 )
         {
             uint8_t* o = heap_segment_mem (seg);
@@ -47029,13 +47044,23 @@ void gc_heap::background_sweep()
 
             verify_soh_segment_list();
 
-#ifdef DOUBLY_LINKED_FL
+#if defined(DOUBLY_LINKED_FL) || defined(USE_REGIONS)
             while (next_seg && heap_segment_background_allocated (next_seg) == 0)
             {
                 dprintf (2, ("[h%d] skip new %p ", heap_number, next_seg));
-                next_seg = heap_segment_next (next_seg);
-            }
+#ifndef DOUBLY_LINKED_FL
+                if (i == max_generation)
+                {
+                    // For SOH segments we go backwards.
+                    next_seg = heap_segment_prev (gen_start_seg, next_seg);
+                }
+                else
 #endif //DOUBLY_LINKED_FL
+                {
+                    next_seg = heap_segment_next (next_seg);
+                }
+            }
+#endif //DOUBLY_LINKED_FL || USE_REGIONS
 
             dprintf (GTC_LOG, ("seg: %p(%p), next_seg: %p(%p), prev_seg: %p(%p), delete_p %d",
                 seg, (seg ? heap_segment_mem (seg) : 0),

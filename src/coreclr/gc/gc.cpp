@@ -49346,20 +49346,23 @@ HRESULT GCHeap::Initialize()
     {
         if (gc_heap::heap_hard_limit)
         {
-#ifndef HOST_64BIT
-            // Regions are not supported on 32bit
-            assert(false);
-#endif //!HOST_64BIT
-
             if (gc_heap::heap_hard_limit_oh[soh])
             {
                 gc_heap::regions_range = gc_heap::heap_hard_limit;
             }
             else
             {
+#ifdef HOST_64BIT
                 // We use this calculation because it's close to what we used for segments.
                 gc_heap::regions_range = ((gc_heap::use_large_pages_p) ? (2 * gc_heap::heap_hard_limit)
                                                                        : (5 * gc_heap::heap_hard_limit));
+#else
+                assert (!gc_heap::use_large_pages_p);
+                uint64_t new_regions_range = 3 * (uint64_t)gc_heap::heap_hard_limit;
+                gc_heap::regions_range = new_regions_range <= SIZE_MAX ?
+                                                        (size_t) new_regions_range:
+                                                        gc_heap::heap_hard_limit;
+#endif
             }
         }
         else
@@ -49494,7 +49497,8 @@ HRESULT GCHeap::Initialize()
         }
     }
 
-    if (!power_of_two_p(gc_region_size) || ((gc_region_size * nhp * min_regions_per_heap) > gc_heap::regions_range))
+    uint64_t total_region_bytes = (uint64_t)gc_region_size * (uint64_t)nhp * (uint64_t)min_regions_per_heap;
+    if (!power_of_two_p(gc_region_size) || total_region_bytes > (uint64_t)gc_heap::regions_range)
     {
         log_init_error_to_host ("Region size is %zd bytes, range is %zd bytes, (%d heaps * %d regions/heap = %d) regions needed initially",
             gc_region_size, gc_heap::regions_range, nhp, min_regions_per_heap, (nhp * min_regions_per_heap));
